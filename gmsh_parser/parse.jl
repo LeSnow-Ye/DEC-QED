@@ -26,18 +26,18 @@ end
 
 Reads fileinstance line by line.
 """
-function parsephysicalnames(fileinstance::IOStream)::Dict{Int, Physicalname_struct}
+function parsephysicalnames(fileinstance::IOStream)::Dict{Int,Physicalname_struct}
 
     # instantiate empty dict to populate 
-    physicalnames_dict = Dict{Int, Physicalname_struct}()
+    physicalnames_dict = Dict{Int,Physicalname_struct}()
 
     # 1st line after $PhysicalNames gives number of physicalnames
     currentline = readline(fileinstance)
     num_physicalnames = parse.(Int, split(strip(currentline), " "))[1]
-    
+
     for _ in 1:num_physicalnames
 
-        currentline = readline(fileinstance) 
+        currentline = readline(fileinstance)
         physicalname_data = split(strip(currentline), " ")
 
         dimension = parse(Int, physicalname_data[1])
@@ -77,14 +77,14 @@ function parse_entities_2(fileinstance::IOStream)::All_entities_struct
     num_volumes = entities_data[4]
 
     # create dictionary of point entities
-    point_entities_dict = Dict{Int, Point_entity_struct}()
+    point_entities_dict = Dict{Int,Point_entity_struct}()
     for _ in 1:num_points
 
         currentline = readline(fileinstance)
         entitydata = split(strip(currentline), " ")
         point_tag = parse(Int, entitydata[1])
         num_physicaltags = parse(Int, entitydata[5])
-        
+
         physicaltags = []
         if num_physicaltags != 0
             append!(physicaltags, parse.(Int, entitydata[6:6+num_physicaltags-1]))
@@ -99,7 +99,7 @@ function parse_entities_2(fileinstance::IOStream)::All_entities_struct
     end
 
     # create dictionary of curve entities
-    curve_entities_dict = Dict{Int, Curve_entity_struct}()
+    curve_entities_dict = Dict{Int,Curve_entity_struct}()
     for _ in 1:num_curves
 
         currentline = readline(fileinstance)
@@ -114,7 +114,7 @@ function parse_entities_2(fileinstance::IOStream)::All_entities_struct
         end
 
         boundingPoints = []
-        bnd_pts_startind = 9+num_physicaltags+1
+        bnd_pts_startind = 9 + num_physicaltags + 1
         append!(boundingPoints, abs.(parse.(Int, entitydata[bnd_pts_startind:bnd_pts_startind+num_boundingPoints-1])))
 
         curve_entity_struct = Curve_entity_struct()
@@ -127,7 +127,7 @@ function parse_entities_2(fileinstance::IOStream)::All_entities_struct
     end
 
     # create dictionary of surface entities
-    surface_entities_dict = Dict{Int, Surface_entity_struct}()
+    surface_entities_dict = Dict{Int,Surface_entity_struct}()
     for _ in 1:num_surfaces
 
         currentline = readline(fileinstance)
@@ -142,7 +142,7 @@ function parse_entities_2(fileinstance::IOStream)::All_entities_struct
         end
 
         boundingCurves = []
-        bnd_curves_startind = 9+num_physicaltags+1
+        bnd_curves_startind = 9 + num_physicaltags + 1
         append!(boundingCurves, abs.(parse.(Int, entitydata[bnd_curves_startind:bnd_curves_startind+num_boundingCurves-1])))
 
         surface_entity_struct = Surface_entity_struct()
@@ -155,7 +155,7 @@ function parse_entities_2(fileinstance::IOStream)::All_entities_struct
     end
 
     # create dictionary of volume entities
-    volume_entities_dict = Dict{Int, Volume_entity_struct}()
+    volume_entities_dict = Dict{Int,Volume_entity_struct}()
     for _ in 1:num_volumes
 
         currentline = readline(fileinstance)
@@ -164,15 +164,15 @@ function parse_entities_2(fileinstance::IOStream)::All_entities_struct
         num_physicaltags = parse(Int, entitydata[8])
         num_boundingSurfaces = parse(Int, entitydata[9+num_physicaltags])
 
-        println(num_physicaltags)
-        
+        # println(num_physicaltags)
+
         physicaltags = []
         if num_physicaltags != 0
             append!(physicaltags, parse.(Int, entitydata[9:9+num_physicaltags-1]))
         end
 
         boundingSurfaces = []
-        bnd_surfaces_startind = 9+num_physicaltags+1
+        bnd_surfaces_startind = 9 + num_physicaltags + 1
         append!(boundingSurfaces, abs.(parse.(Int, entitydata[bnd_surfaces_startind:bnd_surfaces_startind+num_boundingSurfaces-1])))
 
         volume_entity_struct = Volume_entity_struct()
@@ -204,11 +204,11 @@ Return a dict of Nodestruct corresponding to the "\$Nodes" section in fileinstan
 
 Reads fileinstance line by line.
 """
-function parsenodes_2(fileinstance::IOStream, all_entities_struct::All_entities_struct)::Dict{Int64, Nodestruct}
+function parsenodes_2(fileinstance::IOStream, all_entities_struct::All_entities_struct)::Dict{Int64,Nodestruct}
 
     # instantiate empty dict to populate with structs
-    nodedict = Dict{Int, Nodestruct}()
-    
+    nodedict = Dict{Int,Nodestruct}()
+
     # 1st line after $Nodes contains metadata about section
     currentline = readline(fileinstance)
     nodesdata = parse.(Int, split(strip(currentline), " "))
@@ -216,32 +216,32 @@ function parsenodes_2(fileinstance::IOStream, all_entities_struct::All_entities_
     # num_nodes = nodesdata[2]
 
     for _ in 1:num_node_entities
-        
+
         # 1st line of each block contains meta-data about entity
-        currentline = readline(fileinstance) 
+        currentline = readline(fileinstance)
         entitydata = parse.(Int, split(strip(currentline), " "))
         root_entitydim = entitydata[1] # MshFileVersion 4.1
         root_entityid = entitydata[2] # index of the entity (MshFileVersion 4.1)
         num_nodes_inentity = entitydata[4]
 
         # list of all node tags in this entity
-        current_tags = Vector{Int}() 
-        
+        current_tags = Vector{Int}()
+
         # if entity has x nodes, first x lines after 
         # entity meta-data contains all node tags in this entity
         for _ in 1:num_nodes_inentity
-            
+
             currentline = readline(fileinstance)
             tag = parse.(Int, currentline)
             push!(current_tags, tag)
-        
+
         end
 
         for nodeid in current_tags
 
             currentline = readline(fileinstance)
-            nodecoords = parse.(Float64, split(strip(currentline), " ")) 
-            nodecoords = convert(SVector{3, Float64}, nodecoords)
+            nodecoords = parse.(Float64, split(strip(currentline), " "))
+            nodecoords = convert(SVector{3,Float64}, nodecoords)
 
             entities_dict = Dict{Int,Vector{}}()
             # from the root entity, find all higher-dim entities that this node belongs to
@@ -255,7 +255,7 @@ function parsenodes_2(fileinstance::IOStream, all_entities_struct::All_entities_
                 surfacetags = []
                 for ksurface in keys(all_entities_struct.surface_entities_dict)
                     for kcurve in curvetags
-                        if (kcurve in all_entities_struct.surface_entities_dict[ksurface].boundingcurves)&&!(ksurface in surfacetags)
+                        if (kcurve in all_entities_struct.surface_entities_dict[ksurface].boundingcurves) && !(ksurface in surfacetags)
                             append!(surfacetags, ksurface)
                         end
                     end
@@ -263,7 +263,7 @@ function parsenodes_2(fileinstance::IOStream, all_entities_struct::All_entities_
                 volumetags = []
                 for kvolume in keys(all_entities_struct.volume_entities_dict)
                     for ksurface in surfacetags
-                        if (ksurface in all_entities_struct.volume_entities_dict[kvolume].boundingsurfaces)&&!(kvolume in volumetags)
+                        if (ksurface in all_entities_struct.volume_entities_dict[kvolume].boundingsurfaces) && !(kvolume in volumetags)
                             append!(volumetags, kvolume)
                         end
                     end
@@ -274,14 +274,14 @@ function parsenodes_2(fileinstance::IOStream, all_entities_struct::All_entities_
             elseif root_entitydim == 1
                 surfacetags = []
                 for ksurface in keys(all_entities_struct.surface_entities_dict)
-                    if (root_entityid in all_entities_struct.surface_entities_dict[ksurface].boundingcurves)&&!(ksurface in surfacetags)
+                    if (root_entityid in all_entities_struct.surface_entities_dict[ksurface].boundingcurves) && !(ksurface in surfacetags)
                         append!(surfacetags, ksurface)
                     end
                 end
                 volumetags = []
                 for kvolume in keys(all_entities_struct.volume_entities_dict)
                     for ksurface in surfacetags
-                        if (ksurface in all_entities_struct.volume_entities_dict[kvolume].boundingsurfaces)&&!(kvolume in volumetags)
+                        if (ksurface in all_entities_struct.volume_entities_dict[kvolume].boundingsurfaces) && !(kvolume in volumetags)
                             append!(volumetags, kvolume)
                         end
                     end
@@ -292,7 +292,7 @@ function parsenodes_2(fileinstance::IOStream, all_entities_struct::All_entities_
             elseif root_entitydim == 2
                 volumetags = []
                 for kvolume in keys(all_entities_struct.volume_entities_dict)
-                    if (root_entityid in all_entities_struct.volume_entities_dict[kvolume].boundingsurfaces)&&!(kvolume in volumetags)
+                    if (root_entityid in all_entities_struct.volume_entities_dict[kvolume].boundingsurfaces) && !(kvolume in volumetags)
                         append!(volumetags, kvolume)
                     end
                 end
@@ -310,12 +310,12 @@ function parsenodes_2(fileinstance::IOStream, all_entities_struct::All_entities_
             node.id = nodeid
             node.coords = nodecoords
             node.root_entitydim = root_entitydim
-            node.root_entityid  = root_entityid
-            node.entities_dict  = entities_dict
+            node.root_entityid = root_entityid
+            node.entities_dict = entities_dict
             # update nodedict
             nodedict[nodeid] = node
 
-        end 
+        end
 
     end
 
@@ -332,10 +332,10 @@ Return a dict of structs of Tetstruct corresponding to the "\$Elements" section 
 Reads fileinstance line by line.
 The output is a Vector of Tetstruct, which are each mutable. 
 """
-function parsetets(fileinstance::IOStream)::Dict{Int, Tetstruct}
+function parsetets(fileinstance::IOStream)::Dict{Int,Tetstruct}
 
     # instantiate empty dict to populate with structs
-    tetdict = Dict{Int, Tetstruct}()
+    tetdict = Dict{Int,Tetstruct}()
 
     # 1st line after $elements contains metadata about section
     currentline = readline(fileinstance)
@@ -344,16 +344,16 @@ function parsetets(fileinstance::IOStream)::Dict{Int, Tetstruct}
     num_elements_inentity = elementsdata[2]
 
     for _ in 1:num_element_entities
-        
+
         # 1st line of each block contains meta-data about entity
-        currentline = readline(fileinstance) 
+        currentline = readline(fileinstance)
         entitydata = parse.(Int, split(strip(currentline), " "))
         entityid = entitydata[2]
         elementtype = entitydata[3]
         num_elements_inentity = entitydata[4]
 
         if elementtype == 4
-            
+
             for _ in 1:num_elements_inentity
 
                 currentline = readline(fileinstance)
@@ -370,7 +370,7 @@ function parsetets(fileinstance::IOStream)::Dict{Int, Tetstruct}
 
                 # update tetdict
                 tetdict[elementtag] = tet
-                
+
             end
 
         else
@@ -378,12 +378,12 @@ function parsetets(fileinstance::IOStream)::Dict{Int, Tetstruct}
                 currentline = readline(fileinstance)
             end
         end
-    
+
     end
 
     return tetdict
 
-end 
+end
 
 
 """
@@ -396,16 +396,16 @@ parser.
 """
 function parsefile(file::String)::Vector{Any}
 
-    physicalnames_dict = Dict{Int, Physicalname_struct}()
+    physicalnames_dict = Dict{Int,Physicalname_struct}()
     all_entities_struct = All_entities_struct()
-    nodedict = Dict{Int, Nodestruct}()
-    tetdict = Dict{Int, Nodestruct}()
+    nodedict = Dict{Int,Nodestruct}()
+    tetdict = Dict{Int,Nodestruct}()
 
     # get full file path of .msh file
     meshpath = getfilepath(file)
 
     # parse file
-    currentline = "init" 
+    currentline = "init"
     open(meshpath) do fileinstance
 
         while !eof(fileinstance)

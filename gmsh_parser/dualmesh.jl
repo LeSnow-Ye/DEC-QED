@@ -1,6 +1,6 @@
 # This file implements the functionality to create the complete dual mesh.
 
-
+using Base.Threads
 include("primalmesh.jl")
 
 
@@ -11,8 +11,8 @@ include("primalmesh.jl")
 
 Return the coords of the circumcenter of the tet.
 """
-function get_circumcenter_tet(nodedict::Dict{Int, Nodestruct}, 
-                              tet::Tetstruct)::SVector{3, Float64}
+function get_circumcenter_tet(nodedict::Dict{Int,Nodestruct},
+    tet::Tetstruct)::SVector{3,Float64}
 
     nodeids = tet.nodes
     n1 = nodedict[nodeids[1]].coords
@@ -20,16 +20,16 @@ function get_circumcenter_tet(nodedict::Dict{Int, Nodestruct},
     n3 = nodedict[nodeids[3]].coords
     n4 = nodedict[nodeids[4]].coords
 
-    A = [transpose(n2-n1);
-         transpose(n3-n1);
-         transpose(n4-n1)]
+    A = [transpose(n2 - n1);
+        transpose(n3 - n1);
+        transpose(n4 - n1)]
 
-    B = 0.5*[norm(n2)^2 - norm(n1)^2;
-             norm(n3)^2 - norm(n1)^2;
-             norm(n4)^2 - norm(n1)^2]
+    B = 0.5 * [norm(n2)^2 - norm(n1)^2;
+        norm(n3)^2 - norm(n1)^2;
+        norm(n4)^2 - norm(n1)^2]
 
-    return inv(A)*B
-    
+    return inv(A) * B
+
 end
 
 
@@ -39,10 +39,10 @@ end
 
 Create the interior_dualnodedict, given tetdict.
 """
-function create_interior_dualnodedict(nodedict::Dict{Int, Nodestruct}, 
-                                      tetdict::Dict{Int, Tetstruct})::Dict{Int, Interior_dualnodestruct}
+function create_interior_dualnodedict(nodedict::Dict{Int,Nodestruct},
+    tetdict::Dict{Int,Tetstruct})::Dict{Int,Interior_dualnodestruct}
 
-    interior_dualnodedict = Dict{Int, Interior_dualnodestruct}()
+    interior_dualnodedict = Dict{Int,Interior_dualnodestruct}()
 
     for tetpair in tetdict
 
@@ -53,9 +53,9 @@ function create_interior_dualnodedict(nodedict::Dict{Int, Nodestruct},
         interior_dualnode = Interior_dualnodestruct()
         interior_dualnode.id = tetid
         interior_dualnode.coords = get_circumcenter_tet(nodedict, tetstruct)
-        
+
         interior_dualnodedict[tetid] = interior_dualnode
-    
+
     end
 
     return interior_dualnodedict
@@ -71,8 +71,8 @@ Return the tetids that belong to face.
 - Length 1 vector if face is on boundary
 - length 2 if face is in interior (asc order of nodeid)
 """
-function get_tetsforface(face::Facestruct, 
-                         tetdict::Dict{Int, Tetstruct})::Vector{Int}
+function get_tetsforface(face::Facestruct,
+    tetdict::Dict{Int,Tetstruct})::Vector{Int}
 
     # get set of nodes that make up face
     faceid = face.id
@@ -81,14 +81,14 @@ function get_tetsforface(face::Facestruct,
     parent_tetids = []
 
     for tetpair in tetdict
-        
+
         tetnodes = tetpair.second.nodes
         if issubset(faceid, tetnodes)
             push!(parent_tetids, tetpair.first)
         end
-    
+
     end
-    
+
     return sort(parent_tetids)
 
 end
@@ -100,9 +100,9 @@ end
 
 Return the circumcenter of face.
 """
-function get_circumcenter_face(face::Facestruct, 
-                               nodedict::Dict{Int, Nodestruct})::SVector{3, Float64}
-    
+function get_circumcenter_face(face::Facestruct,
+    nodedict::Dict{Int,Nodestruct})::SVector{3,Float64}
+
     # get nodeids of face
     nodeids = face.id
 
@@ -112,14 +112,15 @@ function get_circumcenter_face(face::Facestruct,
     c = nodedict[nodeids[3]].coords
 
     # get circumcenter
-    circumcenter =  begin
-                        a + 
-                        ((norm(c-a)^2 * cross(cross(b-a, c-a), b-a)) 
-                        + (norm(b-a))^2 * cross(cross(c-a, b-a), c-a)) /
-                        (2 * norm(cross(b-a, c-a))^2)
-                    end 
-    
-                    return circumcenter 
+    circumcenter = begin
+        a +
+        ((norm(c - a)^2 * cross(cross(b - a, c - a), b - a))
+         +
+         (norm(b - a))^2 * cross(cross(c - a, b - a), c - a)) /
+        (2 * norm(cross(b - a, c - a))^2)
+    end
+
+    return circumcenter
 
 end
 
@@ -132,11 +133,11 @@ end
 Create the boundary_dualnodedict, given facedict.
 A face is on the boundary iff it belongs to only 1 tet.
 """
-function create_boundary_dualnodedict(nodedict::Dict{Int, Nodestruct},
-                                      facedict::Dict{SVector{3, Int}, Facestruct},
-                                      tetdict::Dict{Int, Tetstruct})::Dict{SVector{3, Int}, Boundary_dualnodestruct}
+function create_boundary_dualnodedict(nodedict::Dict{Int,Nodestruct},
+    facedict::Dict{SVector{3,Int},Facestruct},
+    tetdict::Dict{Int,Tetstruct})::Dict{SVector{3,Int},Boundary_dualnodestruct}
 
-    boundary_dualnodedict = Dict{SVector{3, Int}, Boundary_dualnodestruct}()
+    boundary_dualnodedict = Dict{SVector{3,Int},Boundary_dualnodestruct}()
 
     for facepair in facedict
 
@@ -156,9 +157,9 @@ function create_boundary_dualnodedict(nodedict::Dict{Int, Nodestruct},
             boundary_dualnode.tet = tetids[1]
 
             boundary_dualnodedict[faceid] = boundary_dualnode
-        
+
         end
-    
+
     end
 
     return boundary_dualnodedict
@@ -175,8 +176,8 @@ boundary_dualnodedict from previous function contains the dict of all possible b
 
 If length(get_boundaryfaces_foredge()) >= 1, then the edge belongs on the boundary.
 """
-function get_boundaryfaces_foredge(edge::Edgestruct, 
-                                   boundary_dualnodedict::Dict{SVector{3, Int}, Boundary_dualnodestruct})::Vector{SVector{3, Int}}
+function get_boundaryfaces_foredge(edge::Edgestruct,
+    boundary_dualnodedict::Dict{SVector{3,Int},Boundary_dualnodestruct})::Vector{SVector{3,Int}}
 
     # get set of nodes that make up edge
     edgeid = edge.id
@@ -191,9 +192,9 @@ function get_boundaryfaces_foredge(edge::Edgestruct,
             push!(parent_boundary_faceids, boundary_faceid)
 
         end
-    
+
     end
-    
+
     return parent_boundary_faceids
 
 end
@@ -205,8 +206,8 @@ end
 
 Return the midpoint of edge.
 """
-function get_midpoint_edge(edge::Edgestruct, 
-                           nodedict::Dict{Int, Nodestruct})::SVector{3, Float64}
+function get_midpoint_edge(edge::Edgestruct,
+    nodedict::Dict{Int,Nodestruct})::SVector{3,Float64}
 
     # get nodes
     edgeid = edge.id
@@ -227,11 +228,11 @@ end
 
 Create the Auxiliary_dualnodedict, given edgedict.
 """
-function create_auxiliary_dualnodedict(nodedict::Dict{Int, Nodestruct}, 
-                                       edgedict::Dict{SVector{2, Int}, Edgestruct},
-                                       boundary_dualnodedict::Dict{SVector{3, Int}, Boundary_dualnodestruct})::Dict{SVector{2, Int}, Auxiliary_dualnodestruct}
+function create_auxiliary_dualnodedict(nodedict::Dict{Int,Nodestruct},
+    edgedict::Dict{SVector{2,Int},Edgestruct},
+    boundary_dualnodedict::Dict{SVector{3,Int},Boundary_dualnodestruct})::Dict{SVector{2,Int},Auxiliary_dualnodestruct}
 
-    auxiliary_dualnodedict = Dict{SVector{2, Int}, Auxiliary_dualnodestruct}()
+    auxiliary_dualnodedict = Dict{SVector{2,Int},Auxiliary_dualnodestruct}()
 
     for edgepair in edgedict
 
@@ -250,9 +251,9 @@ function create_auxiliary_dualnodedict(nodedict::Dict{Int, Nodestruct},
             auxiliary_dualnode.coords = get_midpoint_edge(edgestruct, nodedict)
 
             auxiliary_dualnodedict[edgeid] = auxiliary_dualnode
-        
+
         end
-    
+
     end
 
     return auxiliary_dualnodedict
@@ -268,10 +269,10 @@ end
 
 Create dualnodedicts.
 """
-function create_dualnodedicts(nodedict::Dict{Int, Nodestruct}, 
-                              edgedict::Dict{SVector{2, Int}, Edgestruct}, 
-                              facedict::Dict{SVector{3, Int}, Facestruct}, 
-                              tetdict::Dict{Int, Tetstruct})::Dualnodedicts_struct
+function create_dualnodedicts(nodedict::Dict{Int,Nodestruct},
+    edgedict::Dict{SVector{2,Int},Edgestruct},
+    facedict::Dict{SVector{3,Int},Facestruct},
+    tetdict::Dict{Int,Tetstruct})::Dualnodedicts_struct
 
     dualnodedicts = Dualnodedicts_struct()
 
@@ -295,16 +296,16 @@ Create dictionary of interior dual edges.
 
 The list of interior primal faces is obtained by the set difference between facedict and boundary_dualnodedict.
 """
-function create_interior_dualedgedict(facedict::Dict{SVector{3, Int}, Facestruct},
-                                      tetdict::Dict{Int, Tetstruct}, 
-                                      interior_dualnodedict::Dict{Int, Interior_dualnodestruct}, 
-                                      boundary_dualnodedict::Dict{SVector{3, Int}, Boundary_dualnodestruct})::Dict{SVector{3, Int}, Interior_dualedgestruct}
+function create_interior_dualedgedict(facedict::Dict{SVector{3,Int},Facestruct},
+    tetdict::Dict{Int,Tetstruct},
+    interior_dualnodedict::Dict{Int,Interior_dualnodestruct},
+    boundary_dualnodedict::Dict{SVector{3,Int},Boundary_dualnodestruct})::Dict{SVector{3,Int},Interior_dualedgestruct}
 
-    interior_dualedgedict = Dict{SVector{3, Int}, Interior_dualedgestruct}()
+    interior_dualedgedict = Dict{SVector{3,Int},Interior_dualedgestruct}()
 
     # get list of interior primal faces 
     interior_primalfaceids = setdiff(keys(facedict), keys(boundary_dualnodedict))
-    
+
     for interior_primalfaceid in interior_primalfaceids
 
         interior_dualedge = Interior_dualedgestruct()
@@ -333,10 +334,10 @@ Create dictionary of boundary dual edges.
 
 The list of boundary primal face ids are contained in boundary_dualnodedict.
 """
-function create_boundary_dualedgedict(interior_dualnodedict::Dict{Int, Interior_dualnodestruct}, 
-                                      boundary_dualnodedict::Dict{SVector{3, Int}, Boundary_dualnodestruct})::Dict{SVector{3, Int}, Boundary_dualedgestruct}
+function create_boundary_dualedgedict(interior_dualnodedict::Dict{Int,Interior_dualnodestruct},
+    boundary_dualnodedict::Dict{SVector{3,Int},Boundary_dualnodestruct})::Dict{SVector{3,Int},Boundary_dualedgestruct}
 
-    boundary_dualedgedict = Dict{SVector{3, Int}, Boundary_dualedgestruct}()                                  
+    boundary_dualedgedict = Dict{SVector{3,Int},Boundary_dualedgestruct}()
 
     for boundary_dualnodepair in boundary_dualnodedict
 
@@ -346,13 +347,13 @@ function create_boundary_dualedgedict(interior_dualnodedict::Dict{Int, Interior_
         boundary_dualedge = Boundary_dualedgestruct()
         boundary_dualedge.id = boundary_dualnodeid
         boundary_dualedge.dualnodes = [boundary_dualnode.tet, boundary_dualnodeid]  # [interior dual node id, boundary dual node id] 
-        
+
         vec = interior_dualnodedict[boundary_dualedge.dualnodes[1]].coords - boundary_dualnodedict[boundary_dualedge.dualnodes[2]].coords
         boundary_dualedge.length = norm(vec)
 
         # insert into dict
         boundary_dualedgedict[boundary_dualedge.id] = boundary_dualedge
-         
+
     end
 
     return boundary_dualedgedict
@@ -369,11 +370,11 @@ Create dictionary of auxiliary dual edges lying on part of a boundary primal edg
 Each such dual edge corresponds to a tuple (boundary primal edge, primal node part of that boundary primal edge).
 Boundary primal edge ids are already listed in auxiliary_dualnodedict.
 """
-function create_auxiliary_onprimaledge_dualedgedict(nodedict::Dict{Int, Nodestruct},
-                                                    auxiliary_dualnodedict)::Dict{SVector{2, Any}, Auxiliary_onprimaledge_dualedgestruct}
+function create_auxiliary_onprimaledge_dualedgedict(nodedict::Dict{Int,Nodestruct},
+    auxiliary_dualnodedict)::Dict{SVector{2,Any},Auxiliary_onprimaledge_dualedgestruct}
 
-    auxiliary_onprimaledge_dualedgedict = Dict{SVector{2, Any}, Auxiliary_onprimaledge_dualedgestruct}()           
-    
+    auxiliary_onprimaledge_dualedgedict = Dict{SVector{2,Any},Auxiliary_onprimaledge_dualedgestruct}()
+
     # make auxiliary_onprimaledge_dualedgedict, by looping over each tuple (boundary primal edge, primal node part of that boundary primal edge), 
     # & insert into dict
     for boundary_primaledgeid in keys(auxiliary_dualnodedict)
@@ -381,8 +382,8 @@ function create_auxiliary_onprimaledge_dualedgedict(nodedict::Dict{Int, Nodestru
         for boundary_primalnodeid in boundary_primaledgeid
 
             auxiliary_onprimaledge_dualedge = Auxiliary_onprimaledge_dualedgestruct()
-            auxiliary_onprimaledge_dualedge.id = [boundary_primaledgeid, boundary_primalnodeid] 
-            
+            auxiliary_onprimaledge_dualedge.id = [boundary_primaledgeid, boundary_primalnodeid]
+
             vec = auxiliary_dualnodedict[auxiliary_onprimaledge_dualedge.id[1]].coords - nodedict[auxiliary_onprimaledge_dualedge.id[2]].coords
             auxiliary_onprimaledge_dualedge.length = norm(vec)
 
@@ -408,12 +409,12 @@ Create dictionary of auxiliary dual edges lying on the area of a boundary primal
 Each such dual edge corresponds to a tuple (boundary primal face, primal edge part of that boundary primal face).
 Boundary primal face ids are already listed in boundary_dualnodedict.
 """
-function create_auxiliary_onprimalface_dualedgedict(facedict::Dict{SVector{3, Int}, Facestruct},
-                                                    boundary_dualnodedict::Dict{SVector{3, Int}, Boundary_dualnodestruct},
-                                                    auxiliary_dualnodedict::Dict{SVector{2, Int}, Auxiliary_dualnodestruct})::Dict{SVector{2, Any}, Auxiliary_onprimalface_dualedgestruct}
+function create_auxiliary_onprimalface_dualedgedict(facedict::Dict{SVector{3,Int},Facestruct},
+    boundary_dualnodedict::Dict{SVector{3,Int},Boundary_dualnodestruct},
+    auxiliary_dualnodedict::Dict{SVector{2,Int},Auxiliary_dualnodestruct})::Dict{SVector{2,Any},Auxiliary_onprimalface_dualedgestruct}
 
-    auxiliary_onprimalface_dualedgedict = Dict{SVector{2, Any}, Auxiliary_onprimalface_dualedgestruct}()           
-    
+    auxiliary_onprimalface_dualedgedict = Dict{SVector{2,Any},Auxiliary_onprimalface_dualedgestruct}()
+
     # make auxiliary_onprimalface_dualedgedict, by looping over each tuple (boundary primal face, primal edge part of that boundary primal face), 
     # & insert into dict
     for boundary_primalfaceid in keys(boundary_dualnodedict)
@@ -421,8 +422,8 @@ function create_auxiliary_onprimalface_dualedgedict(facedict::Dict{SVector{3, In
         for boundary_primaledgeid in facedict[boundary_primalfaceid].edges
 
             auxiliary_onprimalface_dualedge = Auxiliary_onprimalface_dualedgestruct()
-            auxiliary_onprimalface_dualedge.id = [boundary_primalfaceid, boundary_primaledgeid] 
-            
+            auxiliary_onprimalface_dualedge.id = [boundary_primalfaceid, boundary_primaledgeid]
+
             vec = boundary_dualnodedict[auxiliary_onprimalface_dualedge.id[1]].coords - auxiliary_dualnodedict[auxiliary_onprimalface_dualedge.id[2]].coords
             auxiliary_onprimalface_dualedge.length = norm(vec)
 
@@ -448,13 +449,13 @@ end
 
 Create dualedgedicts.
 """
-function create_dualedgedicts(nodedict::Dict{Int, Nodestruct}, 
-                              facedict::Dict{SVector{3, Int}, Facestruct}, 
-                              tetdict::Dict{Int, Tetstruct}, 
-                              interior_dualnodedict::Dict{Int, Interior_dualnodestruct}, 
-                              boundary_dualnodedict::Dict{SVector{3, Int}, Boundary_dualnodestruct},
-                              auxiliary_dualnodedict::Dict{SVector{2, Int}, Auxiliary_dualnodestruct})
-    
+function create_dualedgedicts(nodedict::Dict{Int,Nodestruct},
+    facedict::Dict{SVector{3,Int},Facestruct},
+    tetdict::Dict{Int,Tetstruct},
+    interior_dualnodedict::Dict{Int,Interior_dualnodestruct},
+    boundary_dualnodedict::Dict{SVector{3,Int},Boundary_dualnodestruct},
+    auxiliary_dualnodedict::Dict{SVector{2,Int},Auxiliary_dualnodestruct})
+
     dualedgedicts = Dualedgedicts_struct()
     dualedgedicts.interior_dualedgedict = create_interior_dualedgedict(facedict, tetdict, interior_dualnodedict, boundary_dualnodedict)
     dualedgedicts.boundary_dualedgedict = create_boundary_dualedgedict(interior_dualnodedict, boundary_dualnodedict)
@@ -475,8 +476,8 @@ end
 Return the vector of tets which contain edge.
 Note however that this vector is not ordered properly.
 """
-function get_tetsforedge_unordered(edge::Edgestruct, 
-                                   tetdict::Dict{Int, Tetstruct})::Vector{Int}
+function get_tetsforedge_unordered(edge::Edgestruct,
+    tetdict::Dict{Int,Tetstruct})::Vector{Int}
 
     # get set of nodes that make up edge
     edgeid = edge.id
@@ -507,10 +508,10 @@ Return the next tetid starting at current_tetid,
 determined using parent_tetids (all tet_ids shared by edge)
 and excluding last_tetid.
 """
-function get_nexttet(current_tetid::Int, 
-                     last_tetid::Int, 
-                     parent_tetids::Vector{Int}, 
-                     tetdict::Dict{Int, Tetstruct})
+function get_nexttet(current_tetid::Int,
+    last_tetid::Int,
+    parent_tetids::Vector{Int},
+    tetdict::Dict{Int,Tetstruct})
 
     adjacent_tetids = []
 
@@ -519,18 +520,18 @@ function get_nexttet(current_tetid::Int,
     # see which tet_ids in parent_tetids are adjacent to current tet
     for parent_tetid in parent_tetids
 
-        adjacent = false 
+        adjacent = false
 
         # want to exclude current_tetid from consideration
         if parent_tetid != current_tetid
-            
+
             parent_tetnodes = tetdict[parent_tetid].nodes
-            
+
             # if shared face, append to list of adjacent tetids
             if length(intersect(current_tetnodes, parent_tetnodes)) == 3
 
                 push!(adjacent_tetids, parent_tetid)
-            
+
             end
 
         end
@@ -557,13 +558,13 @@ get_tetsforedge_ordered(edge::Edgestruct,
 
 Return the vector of tets which contain (an interior primal) edge, ordered.
 """
-function get_tetsforedge_ordered(edge::Edgestruct, 
-                                 tetdict::Dict{Int, Tetstruct})::Vector{Int}
+function get_tetsforedge_ordered(edge::Edgestruct,
+    tetdict::Dict{Int,Tetstruct})::Vector{Int}
 
     parent_tetids_ordered = []
 
     # list of all tets containing this edge
-    parent_tetids_unordered = get_tetsforedge_unordered(edge, tetdict::Dict{Int, Tetstruct})
+    parent_tetids_unordered = get_tetsforedge_unordered(edge, tetdict::Dict{Int,Tetstruct})
 
     # start with lowest tet id
     low_tetid = minimum(parent_tetids_unordered)
@@ -596,20 +597,20 @@ get_tetsforboundaryedge_ordered(edge::Edgestruct,
 
 Return the vector of tets which contain a boundary edge, ordered.
 """
-function get_tetsforboundaryedge_ordered(edge::Edgestruct, 
-                                         tetdict::Dict{Int, Tetstruct},
-                                         boundary_dualedgedict::Dict{SVector{3, Int}, Boundary_dualedgestruct})::Vector{Int}
+function get_tetsforboundaryedge_ordered(edge::Edgestruct,
+    tetdict::Dict{Int,Tetstruct},
+    boundary_dualedgedict::Dict{SVector{3,Int},Boundary_dualedgestruct})::Vector{Int}
 
     parent_tetids_ordered = []
 
     # list of all tets containing this edge
-    parent_tetids_unordered = get_tetsforedge_unordered(edge, tetdict::Dict{Int, Tetstruct})
+    parent_tetids_unordered = get_tetsforedge_unordered(edge, tetdict::Dict{Int,Tetstruct})
 
     # determine the subset of 2 tets which contain the 2 boundary faces
     tets_containing_boundary_primalfaces = []
-    
+
     boundary_primalfaces = get_boundaryfaces_for_boundaryedge(edge, boundary_dualedgedict)
-    
+
     for parent_tetid in parent_tetids_unordered
         faces = tetdict[parent_tetid].faces
         for face in faces
@@ -649,7 +650,7 @@ end
 Get the interior dual edges belonging to interior dual face.
 """
 function get_interior_dualedges_for_interior_dualface(interior_dualface::Interior_dualfacestruct,
-                                                      interior_dualedgedict::Dict{SVector{3, Int}, Interior_dualedgestruct})
+    interior_dualedgedict::Dict{SVector{3,Int},Interior_dualedgestruct})
 
     interior_dualnodes = interior_dualface.interior_dualnodes
 
@@ -674,11 +675,11 @@ function get_interior_dualedges_for_interior_dualface(interior_dualface::Interio
 
         end
 
-    end 
+    end
 
     # last interior dual edge needs to wrap around the end to the start of interior_dualnodes
     interior_dualedge_candidate = sort([interior_dualnodes[end], interior_dualnodes[1]])
-    
+
     for interior_dualedgepair in interior_dualedgedict
 
         interior_dualedgestruct = interior_dualedgepair.second
@@ -706,11 +707,11 @@ Return the unsigned triangle area made of a 2D elementary dual entity.
 We use the word "triangle" to simply distinguish the elementary 
 dual entity from the triangles in the primal mesh.
 """
-function get_area_triangle(coords1::SVector{3, Float64}, 
-                           coords2::SVector{3, Float64}, 
-                           coords3::SVector{3, Float64})::Float64
+function get_area_triangle(coords1::SVector{3,Float64},
+    coords2::SVector{3,Float64},
+    coords3::SVector{3,Float64})::Float64
 
-    area = 0.5*abs(norm(cross(coords2-coords1, coords3-coords1)))
+    area = 0.5 * abs(norm(cross(coords2 - coords1, coords3 - coords1)))
 
 end
 
@@ -720,9 +721,9 @@ end
 Determine the raw value of the dual area using Hirani's method.
 """
 function get_dualarea_rawvalue(edge::Edgestruct,
-                               nodedict::Dict{Int, Nodestruct},
-                               facedict::Dict{SVector{3, Int}, Facestruct}, 
-                               tetdict::Dict{Int, Tetstruct})::Float64
+    nodedict::Dict{Int,Nodestruct},
+    facedict::Dict{SVector{3,Int},Facestruct},
+    tetdict::Dict{Int,Tetstruct})::Float64
 
     dualarea_value = 0
 
@@ -736,7 +737,7 @@ function get_dualarea_rawvalue(edge::Edgestruct,
             push!(facelist, faceid)
         end
     end
-    
+
     # for each face in above list,
     # get list of tets containing that face
     for faceid in facelist
@@ -744,7 +745,7 @@ function get_dualarea_rawvalue(edge::Edgestruct,
         face = facedict[faceid]
 
         tetlist = []
-        for tetpair in tetdict 
+        for tetpair in tetdict
             tetid = tetpair.first
             tetnodes = tetpair.second.nodes
             if issubset(faceid, tetnodes)
@@ -764,7 +765,7 @@ function get_dualarea_rawvalue(edge::Edgestruct,
             lambda1 = 1
 
             # calculate lambda2 
-            vp2 = setdiff(faceid,  edgeid)[1]
+            vp2 = setdiff(faceid, edgeid)[1]
 
             vp2_coords = nodedict[vp2].coords
 
@@ -782,8 +783,8 @@ function get_dualarea_rawvalue(edge::Edgestruct,
             z0 = nodedict[edgeid[1]].coords[3]
             face_circumcenter = get_circumcenter_face(face, nodedict)
 
-            sign_vp2 = sign(a*(vp2_coords[1] - x0) + b*(vp2_coords[2] - y0) + c*(vp2_coords[3] - z0))
-            sign_face_circumcenter = sign(a*(face_circumcenter[1] - x0) + b*(face_circumcenter[2] - y0) + c*(face_circumcenter[3] - z0))
+            sign_vp2 = sign(a * (vp2_coords[1] - x0) + b * (vp2_coords[2] - y0) + c * (vp2_coords[3] - z0))
+            sign_face_circumcenter = sign(a * (face_circumcenter[1] - x0) + b * (face_circumcenter[2] - y0) + c * (face_circumcenter[3] - z0))
 
             lambda2 = -1
             if sign_vp2 == sign_face_circumcenter
@@ -800,8 +801,8 @@ function get_dualarea_rawvalue(edge::Edgestruct,
             e = face_normal[2]
             f = face_normal[3]
 
-            sign_vp3 = sign(d*(vp3_coords[1] - x0) + e*(vp3_coords[2] - y0) + f*(vp3_coords[3] - z0))
-            sign_tet_circumcenter = sign(d*(tet_circumcenter[1] - x0) + e*(tet_circumcenter[2] - y0) + f*(tet_circumcenter[3] - z0))
+            sign_vp3 = sign(d * (vp3_coords[1] - x0) + e * (vp3_coords[2] - y0) + f * (vp3_coords[3] - z0))
+            sign_tet_circumcenter = sign(d * (tet_circumcenter[1] - x0) + e * (tet_circumcenter[2] - y0) + f * (tet_circumcenter[3] - z0))
 
             lambda3 = -1
             if sign_vp3 == sign_tet_circumcenter
@@ -817,7 +818,7 @@ function get_dualarea_rawvalue(edge::Edgestruct,
 
         end
 
-    end 
+    end
 
     return dualarea_value
 
@@ -829,9 +830,9 @@ end
 Determine the effective value of the dual area using Hirani's method.
 """
 function get_dualarea_effectivevalue(edge::Edgestruct,
-                               nodedict::Dict{Int, Nodestruct},
-                               facedict::Dict{SVector{3, Int}, Facestruct}, 
-                               tetdict::Dict{Int, Tetstruct}, material::Array{Float64,1})::Float64
+    nodedict::Dict{Int,Nodestruct},
+    facedict::Dict{SVector{3,Int},Facestruct},
+    tetdict::Dict{Int,Tetstruct}, material::Array{Float64,1})::Float64
 
     dualarea_value = 0
 
@@ -845,7 +846,7 @@ function get_dualarea_effectivevalue(edge::Edgestruct,
             push!(facelist, faceid)
         end
     end
-    
+
     # for each face in above list,
     # get list of tets containing that face
     for faceid in facelist
@@ -853,7 +854,7 @@ function get_dualarea_effectivevalue(edge::Edgestruct,
         face = facedict[faceid]
 
         tetlist = []
-        for tetpair in tetdict 
+        for tetpair in tetdict
             tetid = tetpair.first
             tetnodes = tetpair.second.nodes
             if issubset(faceid, tetnodes)
@@ -873,7 +874,7 @@ function get_dualarea_effectivevalue(edge::Edgestruct,
             lambda1 = 1
 
             # calculate lambda2 
-            vp2 = setdiff(faceid,  edgeid)[1]
+            vp2 = setdiff(faceid, edgeid)[1]
 
             vp2_coords = nodedict[vp2].coords
 
@@ -891,8 +892,8 @@ function get_dualarea_effectivevalue(edge::Edgestruct,
             z0 = nodedict[edgeid[1]].coords[3]
             face_circumcenter = get_circumcenter_face(face, nodedict)
 
-            sign_vp2 = sign(a*(vp2_coords[1] - x0) + b*(vp2_coords[2] - y0) + c*(vp2_coords[3] - z0))
-            sign_face_circumcenter = sign(a*(face_circumcenter[1] - x0) + b*(face_circumcenter[2] - y0) + c*(face_circumcenter[3] - z0))
+            sign_vp2 = sign(a * (vp2_coords[1] - x0) + b * (vp2_coords[2] - y0) + c * (vp2_coords[3] - z0))
+            sign_face_circumcenter = sign(a * (face_circumcenter[1] - x0) + b * (face_circumcenter[2] - y0) + c * (face_circumcenter[3] - z0))
 
             lambda2 = -1
             if sign_vp2 == sign_face_circumcenter
@@ -909,8 +910,8 @@ function get_dualarea_effectivevalue(edge::Edgestruct,
             e = face_normal[2]
             f = face_normal[3]
 
-            sign_vp3 = sign(d*(vp3_coords[1] - x0) + e*(vp3_coords[2] - y0) + f*(vp3_coords[3] - z0))
-            sign_tet_circumcenter = sign(d*(tet_circumcenter[1] - x0) + e*(tet_circumcenter[2] - y0) + f*(tet_circumcenter[3] - z0))
+            sign_vp3 = sign(d * (vp3_coords[1] - x0) + e * (vp3_coords[2] - y0) + f * (vp3_coords[3] - z0))
+            sign_tet_circumcenter = sign(d * (tet_circumcenter[1] - x0) + e * (tet_circumcenter[2] - y0) + f * (tet_circumcenter[3] - z0))
 
             lambda3 = -1
             if sign_vp3 == sign_tet_circumcenter
@@ -926,7 +927,7 @@ function get_dualarea_effectivevalue(edge::Edgestruct,
 
         end
 
-    end 
+    end
 
     return dualarea_value
 
@@ -941,17 +942,17 @@ Compute the raw support volumes of primal edges
 function get_suportvolume(edge::Edgestruct, dualfacedicts::Dualfacedicts_struct)::Float64
 
     interioredge_key = keys(dualfacedicts.interior_dualfacedict)
-    boundaryedge_key = keys(dualfacedicts.boundary_dualfacedict) 
+    boundaryedge_key = keys(dualfacedicts.boundary_dualfacedict)
 
     edge_id = edge.id
     if edge_id in interioredge_key
-        supportvolume_raw = dualfacedicts.interior_dualfacedict[edge_id].raw_area*edge.length
+        supportvolume_raw = dualfacedicts.interior_dualfacedict[edge_id].raw_area * edge.length
     elseif edge_id in boundaryedge_key
-        supportvolume_raw = dualfacedicts.boundary_dualfacedict[edge_id].raw_area*edge.length
+        supportvolume_raw = dualfacedicts.boundary_dualfacedict[edge_id].raw_area * edge.length
     end
 
     return supportvolume_raw
-    
+
 end
 
 
@@ -962,19 +963,21 @@ Create dictionary of interior dual faces.
 Boundary primal edge ids are already listed in auxiliary_dualnodedict,
 so we take the set setdiff(keys(edgedict), keys(auxiliary_dualnodedict)) to find the interior primal edge ids
 """
-function create_interior_dualfacedict(nodedict::Dict{Int, Nodestruct},
-                                      edgedict::Dict{SVector{2, Int}, Edgestruct},
-                                      facedict::Dict{SVector{3, Int}, Facestruct},
-                                      tetdict::Dict{Int, Tetstruct},
-                                      auxiliary_dualnodedict::Dict{SVector{2, Int}, Auxiliary_dualnodestruct},
-                                      interior_dualedgedict::Dict{SVector{3, Int}, Interior_dualedgestruct})::Dict{SVector{2, Int}, Interior_dualfacestruct}
+function create_interior_dualfacedict(nodedict::Dict{Int,Nodestruct},
+    edgedict::Dict{SVector{2,Int},Edgestruct},
+    facedict::Dict{SVector{3,Int},Facestruct},
+    tetdict::Dict{Int,Tetstruct},
+    auxiliary_dualnodedict::Dict{SVector{2,Int},Auxiliary_dualnodestruct},
+    interior_dualedgedict::Dict{SVector{3,Int},Interior_dualedgestruct})::Dict{SVector{2,Int},Interior_dualfacestruct}
 
-    interior_dualfacedict = Dict{SVector{2, Int}, Interior_dualfacestruct}()
+    interior_dualfacedict = Dict{SVector{2,Int},Interior_dualfacestruct}()
 
     # Boundary primal edge ids are already listed in auxiliary_dualnodedict,
     # so we take the set setdiff(keys(edgedict), keys(auxiliary_dualnodedict)) to find the interior primal edge ids
-    for interior_edgeid in setdiff(keys(edgedict), keys(auxiliary_dualnodedict))
-
+    interior_edgeids = collect(setdiff(keys(edgedict), keys(auxiliary_dualnodedict)))
+    lock_dict = ReentrantLock()
+    Threads.@threads for interior_edgeid in interior_edgeids
+        # @info "[#$Threads.threadid()] Creating interior dual face for edge $interior_edgeid"
         interior_dualface = Interior_dualfacestruct()
         interior_dualface.id = interior_edgeid
         interior_dualface.interior_dualnodes = get_tetsforedge_ordered(edgedict[interior_edgeid], tetdict)
@@ -982,8 +985,12 @@ function create_interior_dualfacedict(nodedict::Dict{Int, Nodestruct},
         interior_dualface.raw_area = get_dualarea_rawvalue(edgedict[interior_edgeid], nodedict, facedict, tetdict)
 
         # insert into dict
-        interior_dualfacedict[interior_dualface.id] = interior_dualface
-
+        lock(lock_dict)
+        try
+            interior_dualfacedict[interior_dualface.id] = interior_dualface
+        finally
+            unlock(lock_dict)
+        end
     end
 
     return interior_dualfacedict
@@ -1001,8 +1008,8 @@ This should return a length 2 vector.
 
 The list of boundary faces is in boundary_dualedgedict.
 """
-function get_boundaryfaces_for_boundaryedge(edge::Edgestruct, 
-                                            boundary_dualedgedict::Dict{SVector{3, Int}, Boundary_dualedgestruct})::Vector{SVector{3, Int}}
+function get_boundaryfaces_for_boundaryedge(edge::Edgestruct,
+    boundary_dualedgedict::Dict{SVector{3,Int},Boundary_dualedgestruct})::Vector{SVector{3,Int}}
 
     edgeid = edge.id
 
@@ -1027,11 +1034,11 @@ end
 Get the interior dual edges belonging to boundary dual face.
 """
 function get_interior_dualedges_for_boundary_dualface(boundary_dualface::Boundary_dualfacestruct,
-                                                      interior_dualedgedict::Dict{SVector{3, Int}, Interior_dualedgestruct})::Vector{SVector{3, Int}}
+    interior_dualedgedict::Dict{SVector{3,Int},Interior_dualedgestruct})::Vector{SVector{3,Int}}
 
     # boundary_dual face has dualnodes: [auxiliary dual node, boundary dual node 1, interior dual nodes ..., boundary dual node 2]  
     # only want the interior ones                                             
-    interior_dualnodes = boundary_dualface.dualnodes[3:end-1] 
+    interior_dualnodes = boundary_dualface.dualnodes[3:end-1]
 
     # want list of interior dual edge ids (i.e. interior primal face ids)
     desired_interior_dualedgeids = []
@@ -1057,7 +1064,7 @@ function get_interior_dualedges_for_boundary_dualface(boundary_dualface::Boundar
 
         end
 
-    end 
+    end
 
     # NO WRAPPING AROUND 
     # last interior dual edge needs to wrap around the end to the start of interior_dualnodes
@@ -1085,8 +1092,8 @@ end
 
 Get the boundary dual edges belonging to boundary dual face.
 """
-function get_boundary_dualedges_for_boundary_dualface(boundary_dualface::Boundary_dualfacestruct, 
-                                                      boundary_dualedgedict::Dict{SVector{3, Int}, Boundary_dualedgestruct})::Vector{SVector{3, Int}}
+function get_boundary_dualedges_for_boundary_dualface(boundary_dualface::Boundary_dualfacestruct,
+    boundary_dualedgedict::Dict{SVector{3,Int},Boundary_dualedgestruct})::Vector{SVector{3,Int}}
 
     # dual nodes = [auxiliary dual node, boundary dual node 1, interior dual nodes ..., boundary dual node 2]                                                  
     dualnodes = boundary_dualface.dualnodes
@@ -1108,7 +1115,7 @@ function get_boundary_dualedges_for_boundary_dualface(boundary_dualface::Boundar
 
     end
 
-    
+
     for boundary_dualedgepair in boundary_dualedgedict
 
         boundary_dualedge_id = boundary_dualedgepair.first
@@ -1132,7 +1139,7 @@ end
 
 Get the auxiliary_onprimalface_dualedges belonging to boundary dual face.
 """
-function get_auxiliary_onprimalface_dualedges_for_boundary_dualface(boundary_dualface::Boundary_dualfacestruct)::Vector{SVector{2, Any}}
+function get_auxiliary_onprimalface_dualedges_for_boundary_dualface(boundary_dualface::Boundary_dualfacestruct)::Vector{SVector{2,Any}}
 
     # dual nodes = [auxiliary dual node, boundary dual node 1, interior dual nodes ..., boundary dual node 2]                                                  
     dualnodes = boundary_dualface.dualnodes
@@ -1154,20 +1161,21 @@ Create dictionary of boundary dual faces.
 
 Boundary primal edge ids are already listed in auxiliary_dualnodedict.
 """
-function create_boundary_dualfacedict(nodedict::Dict{Int, Nodestruct},
-                                      edgedict::Dict{SVector{2, Int}, Edgestruct},
-                                      facedict::Dict{SVector{3, Int}, Facestruct},
-                                      tetdict::Dict{Int, Tetstruct},
-                                      auxiliary_dualnodedict::Dict{SVector{2, Int}, Auxiliary_dualnodestruct},
-                                      interior_dualedgedict::Dict{SVector{3, Int}, Interior_dualedgestruct},
-                                      boundary_dualedgedict::Dict{SVector{3, Int}, Boundary_dualedgestruct})::Dict{SVector{2, Int}, Boundary_dualfacestruct}
+function create_boundary_dualfacedict(nodedict::Dict{Int,Nodestruct},
+    edgedict::Dict{SVector{2,Int},Edgestruct},
+    facedict::Dict{SVector{3,Int},Facestruct},
+    tetdict::Dict{Int,Tetstruct},
+    auxiliary_dualnodedict::Dict{SVector{2,Int},Auxiliary_dualnodestruct},
+    interior_dualedgedict::Dict{SVector{3,Int},Interior_dualedgestruct},
+    boundary_dualedgedict::Dict{SVector{3,Int},Boundary_dualedgestruct})::Dict{SVector{2,Int},Boundary_dualfacestruct}
 
-    boundary_dualfacedict = Dict{SVector{2, Int}, Boundary_dualfacestruct}()
+    boundary_dualfacedict = Dict{SVector{2,Int},Boundary_dualfacestruct}()
 
     # Boundary primal edge ids are already listed in auxiliary_dualnodedict
-    for boundary_edgeid in keys(auxiliary_dualnodedict)
+    lock_dict = ReentrantLock()
+    Threads.@threads for boundary_edgeid in collect(keys(auxiliary_dualnodedict))
 
-        boundary_dualface =  Boundary_dualfacestruct()
+        boundary_dualface = Boundary_dualfacestruct()
         boundary_dualface.id = boundary_edgeid
 
         boundaryfaces = get_boundaryfaces_for_boundaryedge(edgedict[boundary_edgeid], boundary_dualedgedict)
@@ -1176,7 +1184,7 @@ function create_boundary_dualfacedict(nodedict::Dict{Int, Nodestruct},
         # starting with the tet containing face 1 
         # and ending with the tet containing face 2
         # (if needed, flip the default order) #
-        parent_tetids = get_tetsforboundaryedge_ordered(edgedict[boundary_edgeid], tetdict, boundary_dualedgedict) 
+        parent_tetids = get_tetsforboundaryedge_ordered(edgedict[boundary_edgeid], tetdict, boundary_dualedgedict)
         if parent_tetids[1] != get_tetsforface(facedict[boundaryfaces[1]], tetdict)[1]
             reverse!(parent_tetids)
         end
@@ -1193,14 +1201,19 @@ function create_boundary_dualfacedict(nodedict::Dict{Int, Nodestruct},
         boundary_dualface.interior_dualedges = get_interior_dualedges_for_boundary_dualface(boundary_dualface, interior_dualedgedict)
 
         boundary_dualface.boundary_dualedges = get_boundary_dualedges_for_boundary_dualface(boundary_dualface, boundary_dualedgedict)
-        
+
         boundary_dualface.auxiliary_onprimalface_dualedges = get_auxiliary_onprimalface_dualedges_for_boundary_dualface(boundary_dualface)
-        
+
         boundary_dualface.raw_area = get_dualarea_rawvalue(edgedict[boundary_edgeid], nodedict, facedict, tetdict)
 
         # insert into dict
-        boundary_dualfacedict[boundary_dualface.id] = boundary_dualface
-        
+        lock(lock_dict)
+        try
+            boundary_dualfacedict[boundary_dualface.id] = boundary_dualface
+        finally
+            unlock(lock_dict)
+        end
+
     end
 
     return boundary_dualfacedict
@@ -1215,17 +1228,17 @@ Create dictionary of auxiliary dual faces.
 Corresponds bijectively to a tuple (boundary primal face, primal node part of that primal face).
 The boundary faces are contained in boundary_dualedgedict.
 """
-function create_auxiliary_dualfacedict(facedict::Dict{SVector{3, Int}, Facestruct},
-                                       boundary_dualedgedict::Dict{SVector{3, Int}, Boundary_dualedgestruct})::Dict{SVector{2, Any} , Auxiliary_dualfacestruct}
+function create_auxiliary_dualfacedict(facedict::Dict{SVector{3,Int},Facestruct},
+    boundary_dualedgedict::Dict{SVector{3,Int},Boundary_dualedgestruct})::Dict{SVector{2,Any},Auxiliary_dualfacestruct}
 
-    auxiliary_dualfacedict = Dict{SVector{2, Any} , Auxiliary_dualfacestruct}()
+    auxiliary_dualfacedict = Dict{SVector{2,Any},Auxiliary_dualfacestruct}()
 
     for boundary_faceid in keys(boundary_dualedgedict)
 
         for boundary_primalnodeid in boundary_faceid
 
             auxiliary_dualface = Auxiliary_dualfacestruct()
-            
+
             auxiliary_dualface.id = [boundary_faceid, boundary_primalnodeid] # [boundary primal face id, primal node part of that primal face]
 
             # get edges of face containing node
@@ -1237,9 +1250,9 @@ function create_auxiliary_dualfacedict(facedict::Dict{SVector{3, Int}, Facestruc
                 end
             end
             sort!(parent_edges)
-            
+
             auxiliary_dualface.dualnodes = [boundary_primalnodeid, parent_edges[1], boundary_faceid, parent_edges[2]] #[primal node, auxiliary dual node 1, boundary dual node, auxiliary dual node 2]
-            
+
 
             # get auxiliary_onprimaledge_dualedges for auxiliary_dualface
             # each such dual edge is of the form [boundary primal edge id, primal node part of that boundary primal edge id]
@@ -1247,15 +1260,15 @@ function create_auxiliary_dualfacedict(facedict::Dict{SVector{3, Int}, Facestruc
             push!(auxiliary_onprimaledge_dualedges, [parent_edges[1], boundary_primalnodeid])
             push!(auxiliary_onprimaledge_dualedges, [parent_edges[2], boundary_primalnodeid])
 
-            auxiliary_dualface.auxiliary_onprimaledge_dualedges = auxiliary_onprimaledge_dualedges 
+            auxiliary_dualface.auxiliary_onprimaledge_dualedges = auxiliary_onprimaledge_dualedges
 
             # get auxiliary_onprimalface_dualedges for auxiliary_dualface
             # each such dual edge is of the form [boundary primal face id, boundary primal edge id]
             auxiliary_onprimalface_dualedges = []
-            push!(auxiliary_onprimalface_dualedges, [boundary_faceid, parent_edges[1]]) 
+            push!(auxiliary_onprimalface_dualedges, [boundary_faceid, parent_edges[1]])
             push!(auxiliary_onprimalface_dualedges, [boundary_faceid, parent_edges[2]])
 
-            auxiliary_dualface.auxiliary_onprimalface_dualedges = auxiliary_onprimalface_dualedges 
+            auxiliary_dualface.auxiliary_onprimalface_dualedges = auxiliary_onprimalface_dualedges
 
             # insert into dict
             auxiliary_dualfacedict[auxiliary_dualface.id] = auxiliary_dualface
@@ -1283,12 +1296,12 @@ Its nodes are the circumcenters of the following:
 We use the word "pyramid" simply to distinguish the elementary dual entity
 from the tetrahedra in the primal mesh.
 """
-function get_volume_pyramid(coords1::SVector{3, Float64}, 
-                            coords2::SVector{3, Float64}, 
-                            coords3::SVector{3, Float64}, 
-                            coords4::SVector{3, Float64})::Float64
+function get_volume_pyramid(coords1::SVector{3,Float64},
+    coords2::SVector{3,Float64},
+    coords3::SVector{3,Float64},
+    coords4::SVector{3,Float64})::Float64
 
-    volume = 1/6*abs(dot(coords4-coords1, cross(coords2-coords1, coords3-coords1)))
+    volume = 1 / 6 * abs(dot(coords4 - coords1, cross(coords2 - coords1, coords3 - coords1)))
 
 end
 
@@ -1297,11 +1310,11 @@ end
 
 Determine the raw value of the dual volume using Hirani's method.
 """
-function get_dualvolume_rawvalue(node::Nodestruct, 
-                                 nodedict,
-                                 edgedict, 
-                                 facedict, 
-                                 tetdict)::Float64
+function get_dualvolume_rawvalue(node::Nodestruct,
+    nodedict,
+    edgedict,
+    facedict,
+    tetdict)::Float64
 
     dualvolume_value = 0
 
@@ -1329,7 +1342,7 @@ function get_dualvolume_rawvalue(node::Nodestruct,
                 push!(facelist, faceid)
             end
         end
-        
+
         # for each face in above list,
         # get list of tets containing that face
         for faceid in facelist
@@ -1337,7 +1350,7 @@ function get_dualvolume_rawvalue(node::Nodestruct,
             face = facedict[faceid]
 
             tetlist = []
-            for tetpair in tetdict 
+            for tetpair in tetdict
                 tetid = tetpair.first
                 tetnodes = tetpair.second.nodes
                 if issubset(faceid, tetnodes)
@@ -1357,7 +1370,7 @@ function get_dualvolume_rawvalue(node::Nodestruct,
                 lambda1 = 1
 
                 # calculate lambda2 
-                vp2 = setdiff(faceid,  edgeid)[1]
+                vp2 = setdiff(faceid, edgeid)[1]
 
                 vp2_coords = nodedict[vp2].coords
 
@@ -1375,8 +1388,8 @@ function get_dualvolume_rawvalue(node::Nodestruct,
                 z0 = nodedict[edgeid[1]].coords[3]
                 face_circumcenter = get_circumcenter_face(face, nodedict)
 
-                sign_vp2 = sign(a*(vp2_coords[1] - x0) + b*(vp2_coords[2] - y0) + c*(vp2_coords[3] - z0))
-                sign_face_circumcenter = sign(a*(face_circumcenter[1] - x0) + b*(face_circumcenter[2] - y0) + c*(face_circumcenter[3] - z0))
+                sign_vp2 = sign(a * (vp2_coords[1] - x0) + b * (vp2_coords[2] - y0) + c * (vp2_coords[3] - z0))
+                sign_face_circumcenter = sign(a * (face_circumcenter[1] - x0) + b * (face_circumcenter[2] - y0) + c * (face_circumcenter[3] - z0))
 
                 lambda2 = -1
                 if sign_vp2 == sign_face_circumcenter
@@ -1393,8 +1406,8 @@ function get_dualvolume_rawvalue(node::Nodestruct,
                 e = face_normal[2]
                 f = face_normal[3]
 
-                sign_vp3 = sign(d*(vp3_coords[1] - x0) + e*(vp3_coords[2] - y0) + f*(vp3_coords[3] - z0))
-                sign_tet_circumcenter = sign(d*(tet_circumcenter[1] - x0) + e*(tet_circumcenter[2] - y0) + f*(tet_circumcenter[3] - z0))
+                sign_vp3 = sign(d * (vp3_coords[1] - x0) + e * (vp3_coords[2] - y0) + f * (vp3_coords[3] - z0))
+                sign_tet_circumcenter = sign(d * (tet_circumcenter[1] - x0) + e * (tet_circumcenter[2] - y0) + f * (tet_circumcenter[3] - z0))
 
                 lambda3 = -1
                 if sign_vp3 == sign_tet_circumcenter
@@ -1410,7 +1423,7 @@ function get_dualvolume_rawvalue(node::Nodestruct,
 
             end
 
-        end 
+        end
 
     end
 
@@ -1425,8 +1438,8 @@ end
 Return the vector of edges which contain node.
 This will be used in get_dualvolume() to get the list of dual faces corresponding to primal node.
 """
-function get_edgesfornode(node::Nodestruct, 
-                          edgedict::Dict{SVector{2, Int}, Edgestruct})::Vector{SVector{2, Int}}
+function get_edgesfornode(node::Nodestruct,
+    edgedict::Dict{SVector{2,Int},Edgestruct})::Vector{SVector{2,Int}}
 
     nodeid = node.id
 
@@ -1451,22 +1464,22 @@ end
 
 Return the dual volume corresponding to node.
 """
-function get_dualvolume(node::Nodestruct, 
-                        nodedict::Dict{Int, Nodestruct},
-                        edgedict::Dict{SVector{2, Int}, Edgestruct}, 
-                        facedict::Dict{SVector{3, Int}, Facestruct}, 
-                        tetdict::Dict{Int, Tetstruct},
-                        interior_dualfacedict::Dict{SVector{2, Int}, Interior_dualfacestruct},  
-                        boundary_dualfacedict::Dict{SVector{2, Int}, Boundary_dualfacestruct}, 
-                        auxiliary_dualfacedict::Dict{SVector{2, Any}, Auxiliary_dualfacestruct})::Dualvolumestruct
-    
+function get_dualvolume(node::Nodestruct,
+    nodedict::Dict{Int,Nodestruct},
+    edgedict::Dict{SVector{2,Int},Edgestruct},
+    facedict::Dict{SVector{3,Int},Facestruct},
+    tetdict::Dict{Int,Tetstruct},
+    interior_dualfacedict::Dict{SVector{2,Int},Interior_dualfacestruct},
+    boundary_dualfacedict::Dict{SVector{2,Int},Boundary_dualfacestruct},
+    auxiliary_dualfacedict::Dict{SVector{2,Any},Auxiliary_dualfacestruct})::Dualvolumestruct
+
     dualvolume = Dualvolumestruct()
-    
+
     dualvolume.raw_volume = get_dualvolume_rawvalue(node, nodedict, edgedict, facedict, tetdict)
-    
-    dualvolume.interior_dualfaces = Vector{SVector{2, Int}}()
-    dualvolume.boundary_dualfaces = Vector{SVector{2, Int}}()
-    dualvolume.auxiliary_dualfaces = Vector{SVector{2, Any}}()
+
+    dualvolume.interior_dualfaces = Vector{SVector{2,Int}}()
+    dualvolume.boundary_dualfaces = Vector{SVector{2,Int}}()
+    dualvolume.auxiliary_dualfaces = Vector{SVector{2,Any}}()
 
     # get edges containing node
     parent_edgeids = get_edgesfornode(node, edgedict)
@@ -1477,13 +1490,13 @@ function get_dualvolume(node::Nodestruct,
         if parent_edgeid in keys(boundary_dualfacedict)
 
             push!(dualvolume.boundary_dualfaces, parent_edgeid)
-        
+
         else
 
             push!(dualvolume.interior_dualfaces, parent_edgeid)
-        
+
         end
-    
+
     end
 
     # append auxiliary dual face, if its id [boundary primal face id, primal node part of that primal face] contains node
@@ -1496,7 +1509,7 @@ function get_dualvolume(node::Nodestruct,
 
             push!(dualvolume.auxiliary_dualfaces, auxiliary_dualface_id)
 
-        end 
+        end
 
     end
 
@@ -1509,7 +1522,7 @@ function get_dualvolume(node::Nodestruct,
     # (NOTE: the advantage of this method, say compared to determining all tets containing node, 
     # is that we don't need to loop over all tets).
     all_interior_dualnodes = Set([])
-    for interior_dualfaceid in dualvolume.interior_dualfaces   
+    for interior_dualfaceid in dualvolume.interior_dualfaces
         union!(all_interior_dualnodes, Set(interior_dualfacedict[interior_dualfaceid].interior_dualnodes))
     end
 
@@ -1520,18 +1533,18 @@ function get_dualvolume(node::Nodestruct,
     # and each auxiliary_dualface [primal node, auxiliary dual node 1, boundary dual node, auxiliary dual node 2],
     # and retrieving the boundary dual nodes
     all_boundary_dualnodes = Set([])
-    
+
     for boundary_dualfaceid in dualvolume.boundary_dualfaces
         union!(all_boundary_dualnodes, Set(boundary_dualfacedict[boundary_dualfaceid].dualnodes[[2, end]]))
     end
     for auxiliary_dualfaceid in dualvolume.auxiliary_dualfaces
         union!(all_boundary_dualnodes, Set(auxiliary_dualfacedict[auxiliary_dualfaceid].dualnodes[[3]]))
     end
-    
+
 
     # println(all_boundary_dualnodes)
     dualvolume.boundary_dualnodes = collect(all_boundary_dualnodes)
-    
+
     # get auxiliary dual nodes, by looping over each of the dual volume's
     # boundary_dualface [auxiliary dual node, boundary dual node 1, interior dual nodes ..., boundary dual node 2]
     # and each auxiliary_dualface [primal node, auxiliary dual node 1, boundary dual node, auxiliary dual node 2],
@@ -1541,11 +1554,11 @@ function get_dualvolume(node::Nodestruct,
     for boundary_dualfaceid in dualvolume.boundary_dualfaces
         union!(all_auxiliary_dualnodes, Set(boundary_dualfacedict[boundary_dualfaceid].dualnodes[[1]]))
     end
-    
+
     for auxiliary_dualfaceid in dualvolume.auxiliary_dualfaces
         union!(all_auxiliary_dualnodes, Set(auxiliary_dualfacedict[auxiliary_dualfaceid].dualnodes[[2, 4]]))
     end
-    
+
 
     dualvolume.auxiliary_dualnodes = collect(all_auxiliary_dualnodes)
 
@@ -1554,12 +1567,12 @@ function get_dualvolume(node::Nodestruct,
     # and each boundary_dualface
     # and retrieving the interior dual edges
     all_interior_dualedges = Set([])
-    for interior_dualfaceid in dualvolume.interior_dualfaces 
+    for interior_dualfaceid in dualvolume.interior_dualfaces
         union!(all_interior_dualedges, Set(interior_dualfacedict[interior_dualfaceid].interior_dualedges))
     end
-    for boundary_dualfaceid in dualvolume.boundary_dualfaces 
+    for boundary_dualfaceid in dualvolume.boundary_dualfaces
         union!(all_interior_dualedges, Set(boundary_dualfacedict[boundary_dualfaceid].interior_dualedges))
-    end 
+    end
 
     dualvolume.interior_dualedges = collect(all_interior_dualedges)
 
@@ -1567,7 +1580,7 @@ function get_dualvolume(node::Nodestruct,
     # boundary_dualface
     # and retrieving the boundary dual edges
     all_boundary_dualedges = Set([])
-    for boundary_dualfaceid in dualvolume.boundary_dualfaces 
+    for boundary_dualfaceid in dualvolume.boundary_dualfaces
         union!(all_boundary_dualedges, Set(boundary_dualfacedict[boundary_dualfaceid].boundary_dualedges))
     end
 
@@ -1578,10 +1591,10 @@ function get_dualvolume(node::Nodestruct,
     # and auxiliary_dualface
     # and retrieving the auxiliary_onprimalface_dualedges
     all_auxiliary_onprimalface_dualedges = Set([])
-    for  boundary_dualfaceid in dualvolume.boundary_dualfaces 
+    for boundary_dualfaceid in dualvolume.boundary_dualfaces
         union!(all_auxiliary_onprimalface_dualedges, Set(boundary_dualfacedict[boundary_dualfaceid].auxiliary_onprimalface_dualedges))
     end
-    for  auxiliary_dualfaceid in dualvolume.auxiliary_dualfaces 
+    for auxiliary_dualfaceid in dualvolume.auxiliary_dualfaces
         union!(all_auxiliary_onprimalface_dualedges, Set(auxiliary_dualfacedict[auxiliary_dualfaceid].auxiliary_onprimalface_dualedges))
     end
 
@@ -1591,7 +1604,7 @@ function get_dualvolume(node::Nodestruct,
     # auxiliary_dualface
     # and retrieving the auxiliary_onprimaledge_dualedges
     all_auxiliary_onprimaledge_dualedges = Set([])
-    for  auxiliary_dualfaceid in dualvolume.auxiliary_dualfaces 
+    for auxiliary_dualfaceid in dualvolume.auxiliary_dualfaces
         union!(all_auxiliary_onprimaledge_dualedges, Set(auxiliary_dualfacedict[auxiliary_dualfaceid].auxiliary_onprimaledge_dualedges))
     end
 
@@ -1613,32 +1626,37 @@ create_dualvolumedict(nodedict::Dict{Int, Nodestruct},
 
 Create dictionary of dual volumes.
 """
-function create_dualvolumedict(nodedict::Dict{Int, Nodestruct}, 
-                               edgedict::Dict{SVector{2, Int}, Edgestruct}, 
-                               facedict::Dict{SVector{3, Int}, Facestruct}, 
-                               tetdict::Dict{Int, Tetstruct},
-                               interior_dualfacedict::Dict{SVector{2, Int}, Interior_dualfacestruct},  
-                               boundary_dualfacedict::Dict{SVector{2, Int}, Boundary_dualfacestruct}, 
-                               auxiliary_dualfacedict::Dict{SVector{2, Any}, Auxiliary_dualfacestruct})::Dict{Int, Dualvolumestruct}
+function create_dualvolumedict(nodedict::Dict{Int,Nodestruct},
+    edgedict::Dict{SVector{2,Int},Edgestruct},
+    facedict::Dict{SVector{3,Int},Facestruct},
+    tetdict::Dict{Int,Tetstruct},
+    interior_dualfacedict::Dict{SVector{2,Int},Interior_dualfacestruct},
+    boundary_dualfacedict::Dict{SVector{2,Int},Boundary_dualfacestruct},
+    auxiliary_dualfacedict::Dict{SVector{2,Any},Auxiliary_dualfacestruct})::Dict{Int,Dualvolumestruct}
 
-    dualvolumedict = Dict{Int, Dualvolumestruct}()
+    dualvolumedict = Dict{Int,Dualvolumestruct}()
 
-    for nodepair in nodedict
+    lock_dict = ReentrantLock()
+    dict_keys = collect(keys(nodedict))
+    Threads.@threads for nodeid in dict_keys
+        node = nodedict[nodeid]
 
-        nodeid = nodepair.first
-        node = nodepair.second
+        dualvolume = get_dualvolume(node,
+            nodedict,
+            edgedict,
+            facedict,
+            tetdict,
+            interior_dualfacedict,
+            boundary_dualfacedict,
+            auxiliary_dualfacedict)
 
-        dualvolume = get_dualvolume(node, 
-                                    nodedict,
-                                    edgedict, 
-                                    facedict, 
-                                    tetdict, 
-                                    interior_dualfacedict,
-                                    boundary_dualfacedict,
-                                    auxiliary_dualfacedict)
-
-        dualvolumedict[nodeid] = dualvolume
-
+        # insert into dict
+        lock(lock_dict)
+        try
+            dualvolumedict[nodeid] = dualvolume
+        finally
+            unlock(lock_dict)
+        end
     end
 
     return dualvolumedict
@@ -1655,6 +1673,8 @@ Returns all completed dual mesh dictionaries.
 """
 function complete_dualmesh(file::String)
 
+    @info "Start constructing dual mesh for $file"
+
     primalmesh, _, _ = complete_primalmesh(file)
 
     nodedict = primalmesh.nodedict
@@ -1665,72 +1685,80 @@ function complete_dualmesh(file::String)
     dualmesh = Dualmeshstruct()
 
     # create dualnodedicts & insert into dual mesh
+    @info "Creating dual node dicts"
     dualnodedicts = Dualnodedicts_struct()
-    dualnodedicts.interior_dualnodedict = create_interior_dualnodedict(nodedict, 
-                                                                       tetdict)
-    dualnodedicts.boundary_dualnodedict = create_boundary_dualnodedict(nodedict, 
-                                                                       facedict, 
-                                                                       tetdict)
-    dualnodedicts.auxiliary_dualnodedict = create_auxiliary_dualnodedict(nodedict, 
-                                                                         edgedict, 
-                                                                         dualnodedicts.boundary_dualnodedict)
+    dualnodedicts.interior_dualnodedict = create_interior_dualnodedict(nodedict,
+        tetdict)
+    dualnodedicts.boundary_dualnodedict = create_boundary_dualnodedict(nodedict,
+        facedict,
+        tetdict)
+    dualnodedicts.auxiliary_dualnodedict = create_auxiliary_dualnodedict(nodedict,
+        edgedict,
+        dualnodedicts.boundary_dualnodedict)
 
-    dualmesh.dualnodedicts =  dualnodedicts
+    dualmesh.dualnodedicts = dualnodedicts
 
     # create dualedgedicts & insert into dual mesh
+    @info "Creating dual edge dicts"
     dualedgedicts = Dualedgedicts_struct()
-    dualedgedicts.interior_dualedgedict = create_interior_dualedgedict(facedict, 
-                                                                       tetdict,
-                                                                       dualnodedicts.interior_dualnodedict,
-                                                                       dualnodedicts.boundary_dualnodedict)
-    dualedgedicts.boundary_dualedgedict = create_boundary_dualedgedict(dualnodedicts.interior_dualnodedict, 
-                                                                       dualnodedicts.boundary_dualnodedict)
+    dualedgedicts.interior_dualedgedict = create_interior_dualedgedict(facedict,
+        tetdict,
+        dualnodedicts.interior_dualnodedict,
+        dualnodedicts.boundary_dualnodedict)
+    dualedgedicts.boundary_dualedgedict = create_boundary_dualedgedict(dualnodedicts.interior_dualnodedict,
+        dualnodedicts.boundary_dualnodedict)
 
-    dualedgedicts.auxiliary_onprimaledge_dualedgedict = create_auxiliary_onprimaledge_dualedgedict(nodedict, 
-                                                                                                   dualnodedicts.auxiliary_dualnodedict)
-    dualedgedicts.auxiliary_onprimalface_dualedgedict = create_auxiliary_onprimalface_dualedgedict(facedict, 
-                                                                                                   dualnodedicts.boundary_dualnodedict, 
-                                                                                                   dualnodedicts.auxiliary_dualnodedict)
+    dualedgedicts.auxiliary_onprimaledge_dualedgedict = create_auxiliary_onprimaledge_dualedgedict(nodedict,
+        dualnodedicts.auxiliary_dualnodedict)
+    dualedgedicts.auxiliary_onprimalface_dualedgedict = create_auxiliary_onprimalface_dualedgedict(facedict,
+        dualnodedicts.boundary_dualnodedict,
+        dualnodedicts.auxiliary_dualnodedict)
 
     dualmesh.dualedgedicts = dualedgedicts
 
     # create dualfacedicts & insert into dual mesh
+    @info "Creating dual face dicts"
     dualfacedicts = Dualfacedicts_struct()
+    @info "  - interior_dualfacedict"
     dualfacedicts.interior_dualfacedict = create_interior_dualfacedict(nodedict,
-                                                                       edgedict,
-                                                                       facedict,
-                                                                       tetdict,
-                                                                       dualnodedicts.auxiliary_dualnodedict,
-                                                                       dualedgedicts.interior_dualedgedict)
+        edgedict,
+        facedict,
+        tetdict,
+        dualnodedicts.auxiliary_dualnodedict,
+        dualedgedicts.interior_dualedgedict)
+    @info "  - boundary_dualfacedict"
     dualfacedicts.boundary_dualfacedict = create_boundary_dualfacedict(nodedict,
-                                                                       edgedict,
-                                                                       facedict,
-                                                                       tetdict,
-                                                                       dualnodedicts.auxiliary_dualnodedict,
-                                                                       dualedgedicts.interior_dualedgedict,
-                                                                       dualedgedicts.boundary_dualedgedict)
-    dualfacedicts.auxiliary_dualfacedict = create_auxiliary_dualfacedict(facedict, 
-                                                                         dualedgedicts.boundary_dualedgedict)
+        edgedict,
+        facedict,
+        tetdict,
+        dualnodedicts.auxiliary_dualnodedict,
+        dualedgedicts.interior_dualedgedict,
+        dualedgedicts.boundary_dualedgedict)
+    @info "  - auxiliary_dualfacedict"
+    dualfacedicts.auxiliary_dualfacedict = create_auxiliary_dualfacedict(facedict,
+        dualedgedicts.boundary_dualedgedict)
 
     dualmesh.dualfacedicts = dualfacedicts
 
     # create dualvomedict & insert into dual mesh
+    @info "Creating dual volume dict"
     dualmesh.dualvolumedict = create_dualvolumedict(nodedict,
-                                                    edgedict,
-                                                    facedict,
-                                                    tetdict,
-                                                    dualfacedicts.interior_dualfacedict,
-                                                    dualfacedicts.boundary_dualfacedict,
-                                                    dualfacedicts.auxiliary_dualfacedict)                       
+        edgedict,
+        facedict,
+        tetdict,
+        dualfacedicts.interior_dualfacedict,
+        dualfacedicts.boundary_dualfacedict,
+        dualfacedicts.auxiliary_dualfacedict)
 
 
     # compute raw support volumes for primal edges
+    @info "Computing raw support volumes for primal edges"
     for edgeid in keys(edgedict)
         edgedict[edgeid].supportvolume = get_suportvolume(edgedict[edgeid], dualfacedicts)
     end
     # update edgedict
     primalmesh.edgedict = edgedict
-
+    @info "Done computing dualmesh"
     return dualmesh, primalmesh
 
 end
